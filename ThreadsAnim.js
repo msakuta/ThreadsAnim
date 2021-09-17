@@ -10,11 +10,13 @@ let deskBackImage;
 let studentImages = [];
 let studentSitImage;
 
-const animFrames = 10;
+const animFrames = 5;
 
 const IDLE = 0;
 const WALKING = 1;
 const SIT = 2;
+
+const walkSpeed = 10;
 
 class Person {
     name = "A";
@@ -36,38 +38,54 @@ class Person {
 
     animate(){
         if(this.state === WALKING){
-            if(Math.abs(this.pos[0] - this.dest) < 2){
+            if(Math.abs(this.pos[0] - this.dest) < walkSpeed){
                 this.state = this.dest === 0 ? IDLE : SIT;
                 this.pos[0] = this.dest;
             }
             else
-                this.pos[0] = (this.pos[0] + (this.pos[0] < this.dest ? 2 : -2) + width) % width;
+                this.pos[0] = (this.pos[0] + (this.pos[0] < this.dest ? walkSpeed : -walkSpeed) + width) % width;
         }
-        else if(this.state === SIT && this.balls.length === 0){
-            if(tasks === 0 && --this.cooldown <= 0){
-                this.dest = 0;
-                this.state = WALKING;
+        else if(this.state === SIT/* && this.balls.length === 0*/){
+            if(--this.cooldown <= 0){
+                if(tasks.length === 0){
+                    this.dest = 0;
+                    this.state = WALKING;
+                }
+                else{
+                    // fetch task
+                    this.cooldown += 100;
+                    tasks.pop();
+                }
             }
         }
         else if(this.state === IDLE && tasks.length !== 0){
-            this.state = WALKING;
-            this.dest = this.id * 100 + 100;
+            if(walkCooldown <= 0){
+                this.state = WALKING;
+                this.dest = this.id * 100 + 100;
+                walkCooldown += 20;
+            }
+            walkCooldown--;
         }
         this.frame = (this.frame + 1) % (2 * animFrames);
     }
 
     draw(ctx){
         var color = 0 < this.cooldown ? "#7f7f7f" : "#000000";
-        var headHeight = 50;
+        var headHeight = 40;
 
         var animFrame = 0;
         if(this.state === WALKING){
             animFrame = Math.max(0, Math.min(animImages.length-1, Math.floor(4 * (1. - this.cooldown / taskWait))));
 
             // ctx.drawImage(animImages[animFrame], this.pos[0] - 30, this.pos[1] - headHeight - 10);
+            ctx.save();
+            ctx.translate(this.pos[0], this.pos[1] - headHeight - 10);
+            if(this.pos[0] > this.dest)
+                ctx.scale(-1, 1);
             ctx.drawImage(studentImages[Math.floor(this.frame / animFrames)],
-                this.pos[0] < this.dest ? 0 : 95, 0, 95, 214,
-                this.pos[0], this.pos[1] - headHeight - 10, 60, 134);
+                0, 0, 95, 214,
+                0, 0, 60, 134);
+            ctx.restore();
         }
         else if(this.state === SIT)
             ctx.drawImage(studentSitImage, this.pos[0], this.pos[1] - headHeight - 10, 60, 134);
@@ -76,7 +94,7 @@ class Person {
 
         ctx.font = "15px Arial";
         ctx.fillStyle = color;
-        ctx.fillText(this.name, this.pos[0] - 5, this.pos[1] - headHeight - 10);
+        ctx.fillText(this.name, this.pos[0] + 30, this.pos[1] - headHeight - 10);
 
     }
 }
@@ -163,11 +181,12 @@ var people = [...Array(4)].map((_, i) => new Person({
     id: i,
     name: "ABCD"[i],
     dest: i * 100 + 100,
-    pos: [-30 + i * 100, 300],
+    pos: [0, 300],
     balls: [], cooldown: i === 0 ? 10 : 0
 }));
 const desks = [...Array(4)].map((_, i) => new Desk([i * 100 + 100, 300]));
 let tasks = [...Array(4)].map((_, i) => i);
+let walkCooldown = 0;
 
 for(var i = 0; i < 10; i++){
     var target = people[Math.floor(Math.random() * people.length)];
@@ -249,6 +268,10 @@ function animate(){
             if(elem)
                 elem.innerHTML = ballThrows;
         }
+    }
+
+    if(0 === tasks.length && people.reduce((accum, person) => accum && person.state === IDLE, true)){
+        tasks = [...Array(4)].map((_, i) => i);
     }
 }
 
