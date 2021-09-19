@@ -131,7 +131,7 @@ class Person {
 
         ctx.font = "15px Arial";
         ctx.fillStyle = color;
-        ctx.fillText(`${this.name} (${this.balls.length})`, this.pos[0] + 30, this.pos[1] - headHeight - 10);
+        ctx.fillText(this.name, this.pos[0] + 30, this.pos[1] - headHeight - 10);
     }
 }
 
@@ -176,6 +176,12 @@ class Ball {
         this.velo[0] = ((target.pos[0]) - (source.pos[0])) / timeToArrive;
         this.velo[1] = -speed;
         balls.push(this);
+
+        ballThrows++;
+        const elem = document.getElementById("ballThrows");
+        if(elem)
+            elem.innerHTML = ballThrows;
+
         return timeToArrive;
     }
 }
@@ -253,7 +259,7 @@ let mainThread = new Person({
     id: -1,
     name: "mainThread",
     dest: 0,
-    pos: [0, 300],
+    pos: [people.length * 100 + 100, 300],
     balls: [],
 });
 
@@ -297,41 +303,6 @@ function animate(){
     for(var i = 0; i < people.length; i++){
         var person = people[i];
         person.animate();
-        // console.log("person " + i + ": cooldown: " + person.cooldown);
-        // if(0 < person.cooldown){
-        //     person.cooldown--;
-        //     continue;
-        // }
-        // var waitingBalls = balls.reduce(function(count, ball){
-        //     if(ball.owner === person)
-        //         count++;
-        //     return count;
-        // }, 0);
-        // if((asynch || !waitingBalls) && 0 < person.balls.length){
-        //     var ball = person.balls.splice(0, 1)[0];
-        //     var leastHardWorkers = multithread ? people.filter(function(person){
-        //         var leastQueue = people.reduce(function(min, person){
-        //             return person.balls.length < min ? person.balls.length : min;
-        //         }, balls.length);
-        //         return leastQueue === person.balls.length;
-        //     }) : people.slice(0, 1);
-        //     // console.log("leastHardWorkers: " + leastHardWorkers.length);
-        //     var target = leastHardWorkers[Math.floor(Math.random() * leastHardWorkers.length)];
-        //     var speed = 10 + Math.random() * 20;
-        //     /// x = 1/2 * v * t^2 => t = \sqrt{2x/v}
-        //     var timeToArrive = (2 * speed / accel);
-        //     ball.owner = target;
-        //     ball.pos[0] = person.pos[0] + 15;
-        //     ball.pos[1] = person.pos[1] - 25;
-        //     ball.velo[0] = ((target.pos[0] - 15) - (person.pos[0] + 15)) / timeToArrive;
-        //     ball.velo[1] = -speed;
-        //     balls.push(ball);
-        //     person.cooldown = taskWait;
-        //     ballThrows++;
-        //     var elem = document.getElementById("ballThrows");
-        //     if(elem)
-        //         elem.innerHTML = ballThrows;
-        // }
     }
 
     if(0 === tasks.length && people.reduce((accum, person) => accum && person.state === IDLE, true)){
