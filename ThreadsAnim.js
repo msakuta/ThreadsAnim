@@ -10,7 +10,8 @@ let studentImages = [];
 let studentSitImage;
 
 let taskWait = 50;
-let ballSpeed = 20;
+let ballSpeed = 15;
+let ballCount = 16;
 let multithread = false;
 let workStealing = false;
 
@@ -210,12 +211,21 @@ window.addEventListener('load', function() {
         });
     }
 
-    const ballSpeedEdit = this.document.getElementById("ballSpeedEdit");
-    if(ballSpeedEdit){
-        ballSpeedEdit.addEventListener("change", function(){
-            ballSpeed = parseFloat(ballSpeedEdit.value);
+    function sliderInit(sliderId, labelId, writer){
+        const slider = document.getElementById(sliderId);
+        const label = document.getElementById(labelId);
+        label.innerHTML = slider.value;
+
+        slider.addEventListener("input", (_event) => {
+            let value = parseFloat(slider.value);
+            label.innerHTML = value;
+            writer(value);
         });
-    }
+    };
+
+    sliderInit("taskWait", "taskWaitLabel", value => taskWait = parseFloat(value));
+    sliderInit("ballSpeed", "ballSpeedLabel", value => ballSpeed = parseFloat(value));
+    sliderInit("ballCount", "ballCountLabel", value => ballCount = parseFloat(value));
 
     canvas = document.getElementById("scratch");
     if ( ! canvas || ! canvas.getContext ) {
@@ -310,7 +320,7 @@ function animate(){
     }
 
     if(0 === mainThread.tasks.length && workerThreads.reduce((accum, worker) => accum && worker.state === IDLE, true)){
-        mainThread.tasks = [...Array(16)].map((_, i) => new Ball(mainThread));
+        mainThread.tasks = [...Array(ballCount)].map((_, i) => new Ball(mainThread));
         mainThread.balls = [];
     }
     else{
