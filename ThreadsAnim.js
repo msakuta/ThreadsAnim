@@ -9,6 +9,7 @@ let deskBackImage;
 let studentImages = [];
 let studentSitImage;
 
+let numThreads = 4;
 let taskWait = 50;
 let ballSpeed = 15;
 let ballCount = 16;
@@ -53,7 +54,7 @@ class Person {
                 this.cooldown = 0;
             }
             else
-                this.pos[0] = (this.pos[0] + (this.pos[0] < this.dest ? walkSpeed : -walkSpeed) + width) % width;
+                this.pos[0] += this.pos[0] < this.dest ? walkSpeed : -walkSpeed;
         }
         else if(this.state === SIT/* && this.balls.length === 0*/){
             if(this.cooldown <= 0){
@@ -223,6 +224,7 @@ window.addEventListener('load', function() {
         });
     };
 
+    sliderInit("numThreads", "numThreadsLabel", value => numThreads = parseFloat(value));
     sliderInit("taskWait", "taskWaitLabel", value => taskWait = parseFloat(value));
     sliderInit("ballSpeed", "ballSpeedLabel", value => ballSpeed = parseFloat(value));
     sliderInit("ballCount", "ballCountLabel", value => ballCount = parseFloat(value));
@@ -260,25 +262,34 @@ window.addEventListener('load', function() {
 
 var ballThrows = 0;
 var balls = [];
-var workerThreads = [...Array(4)].map((_, i) => new Person({
-    id: i,
-    name: "ABCD"[i],
-    dest: i * 100 + 100,
-    pos: [0, 300],
-    balls: [], cooldown: i === 0 ? 10 : 0
-}));
+let workerThreads;
 let mainThread = new Person({
     id: -1,
     name: "mainThread",
     dest: 0,
-    pos: [workerThreads.length * 100 + 100, 300],
+    pos: [100, 300],
     balls: [],
 });
 
 mainThread.tasks = [];
 
-const desks = [...Array(4)].map((_, i) => new Desk([i * 100 + 100, 300]));
+let desks;
 let walkCooldown = 0;
+
+function resetState(){
+    workerThreads = [...Array(numThreads)].map((_, i) => new Person({
+        id: i,
+        name: "ABCDEFGHJKLMOPQR"[i],
+        dest: i * 100 + 100,
+        pos: [0, 300],
+        balls: [], cooldown: i === 0 ? 10 : 0
+    }));
+    desks = [...Array(numThreads)].map((_, i) => new Desk([i * 100 + 100, 300]))
+
+    mainThread.pos[0] = workerThreads.length * 100 + 100;
+}
+
+resetState();
 
 // for(var i = 0; i < 10; i++){
 //     var target = people[Math.floor(Math.random() * people.length)];
@@ -322,6 +333,7 @@ function animate(){
     if(0 === mainThread.tasks.length && workerThreads.reduce((accum, worker) => accum && worker.state === IDLE, true)){
         mainThread.tasks = [...Array(ballCount)].map((_, i) => new Ball(mainThread));
         mainThread.balls = [];
+        resetState();
     }
     else{
         for(let i = 0; i < mainThread.tasks.length; i++){
