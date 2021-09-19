@@ -1,13 +1,17 @@
 ThreadsAnim = new (function(){
 'use strict';
-var canvas;
-var width;
-var height;
+let canvas;
+let width;
+let height;
 let deskImage;
 let chairImage;
 let deskBackImage;
 let studentImages = [];
 let studentSitImage;
+
+let taskWait = 8;
+let multithread = false;
+let workStealing = false;
 
 const accel = 2;
 const animFrames = 5;
@@ -65,7 +69,7 @@ class Person {
                         this.dest = 0;
                         this.state = WALKING;
                     }
-                    else {
+                    else if(workStealing){
                         // fetch task
                         let ball = mainThread.tasks.pop();
                         ball.throw(this, mainThread);
@@ -88,7 +92,7 @@ class Person {
 
         for(let j = 0; j < this.balls.length; j++){
             let ball = this.balls[j];
-            ball.pos[0] = this.pos[0] + deskOffset[0] - 5 * j;
+            ball.pos[0] = this.pos[0] + deskOffset[0] - ballRadius * (j + 1);
             ball.pos[1] = this.pos[1] + deskOffset[1];
         }
     }
@@ -182,10 +186,10 @@ class Ball {
 }
 
 window.addEventListener('load', function() {
-    var asyncCheck = document.getElementById("asyncCheck");
-    if(asyncCheck){
-        asyncCheck.addEventListener("click", function(){
-            asynch = asyncCheck.checked;
+    const workStealingCheck = document.getElementById("workStealingCheck");
+    if(workStealingCheck){
+        workStealingCheck.addEventListener("click", function(){
+            workStealing = workStealingCheck.checked;
         });
     }
 
@@ -233,12 +237,9 @@ window.addEventListener('load', function() {
     window.setInterval(timerProc, 50);
 });
 
-var taskWait = 8;
-var multithread = false;
-var asynch = false;
 var ballThrows = 0;
 var balls = [];
-var people = [...Array(4)].map((_, i) => new Person({
+var workerThreads = [...Array(4)].map((_, i) => new Person({
     id: i,
     name: "ABCD"[i],
     dest: i * 100 + 100,
@@ -249,7 +250,7 @@ let mainThread = new Person({
     id: -1,
     name: "mainThread",
     dest: 0,
-    pos: [people.length * 100 + 100, 300],
+    pos: [workerThreads.length * 100 + 100, 300],
     balls: [],
 });
 
@@ -291,13 +292,13 @@ function animate(){
             i++;
     }
 
-    for(var i = 0; i < people.length; i++){
-        var person = people[i];
+    for(var i = 0; i < workerThreads.length; i++){
+        var person = workerThreads[i];
         person.animate();
     }
 
-    if(0 === mainThread.tasks.length && people.reduce((accum, person) => accum && person.state === IDLE, true)){
-        mainThread.tasks = [...Array(8)].map((_, i) => new Ball(mainThread));
+    if(0 === mainThread.tasks.length && workerThreads.reduce((accum, worker) => accum && worker.state === IDLE, true)){
+        mainThread.tasks = [...Array(16)].map((_, i) => new Ball(mainThread));
         mainThread.balls = [];
     }
     else{
@@ -310,6 +311,13 @@ function animate(){
             const ball = mainThread.balls[i];
             ball.pos[0] = mainThread.pos[0] + deskOffset[0] + i * ballRadius;
             ball.pos[1] = mainThread.pos[1] + deskOffset[1];
+        }
+
+        if(!workStealing && workerThreads.reduce((acc, worker) => acc && worker.state === SIT, true) && 0 < mainThread.tasks.length){
+            let ball;
+            while(ball = mainThread.tasks.pop()){
+                ball.throw(workerThreads[mainThread.tasks.length % workerThreads.length], mainThread);
+            }
         }
     }
 }
@@ -342,14 +350,14 @@ function draw() {
         desk.draw(ctx, 1);
 
     // Draw people (represents threads)
-    for(var i = 0; i < people.length; i++)
-        people[i].draw(ctx, 1);
+    for(var i = 0; i < workerThreads.length; i++)
+        workerThreads[i].draw(ctx, 1);
 
     for(let desk of desks)
         desk.draw(ctx, 0);
 
-    for(var i = 0; i < people.length; i++)
-        people[i].draw(ctx, 0);
+    for(var i = 0; i < workerThreads.length; i++)
+        workerThreads[i].draw(ctx, 0);
 
     for(let i = 0; i < mainThread.tasks.length; i++)
         drawBall(mainThread.tasks[i], ctx);
