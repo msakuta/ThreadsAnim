@@ -11,6 +11,7 @@ let studentSitImage;
 
 let numThreads = 4;
 let taskWait = 50;
+let bimodalWait = false;
 let ballSpeed = 15;
 let ballCount = 16;
 let poolThreads = false;
@@ -64,7 +65,8 @@ class Person {
                 }
                 if(this.balls.length !== 0 && this.heldBall === null){
                     this.heldBall = this.balls.pop();
-                    this.cooldown = taskWait * (Math.random() + 0.5);
+                    this.cooldown = taskWait * (Math.random() + 0.5) +
+                        (bimodalWait ? (Math.random() < 0.5) * taskWait * 2. : 0.);
                 }
                 else if(balls.reduce((acc, ball) => acc && ball.owner !== this, true)){
                     // If a ball is flying towards us, don't fetch the next ball or return.
@@ -207,10 +209,10 @@ window.addEventListener('load', function() {
         });
     }
 
-    const taskWaitEdit = this.document.getElementById("taskWaitEdit");
-    if(taskWaitEdit){
-        taskWaitEdit.addEventListener("change", function(){
-            taskWait = parseFloat(taskWaitEdit.value);
+    const bimodalWaitCheck = this.document.getElementById("bimodalWaitCheck");
+    if(bimodalWaitCheck){
+        bimodalWaitCheck.addEventListener("change", function(){
+            bimodalWait = bimodalWaitCheck.checked;
         });
     }
 
