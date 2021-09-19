@@ -3,7 +3,6 @@ ThreadsAnim = new (function(){
 var canvas;
 var width;
 var height;
-var animImages = [];
 let deskImage;
 let chairImage;
 let deskBackImage;
@@ -58,19 +57,18 @@ class Person {
                 }
                 if(this.balls.length !== 0 && this.heldBall === null){
                     this.heldBall = this.balls.pop();
-                    this.cooldown = Math.random() * 50 + 100;
+                    this.cooldown = taskWait;
                 }
                 else if(balls.reduce((acc, ball) => acc && ball.owner !== this, true)){
                     // If a ball is flying towards us, don't fetch the next ball or return.
-                    if(tasks.length === 0){
+                    if(mainThread.tasks.length === 0){
                         this.dest = 0;
                         this.state = WALKING;
                     }
                     else {
                         // fetch task
-                        let ball = new Ball(this);
+                        let ball = mainThread.tasks.pop();
                         ball.throw(this, mainThread);
-                        tasks.pop();
                     }
                 }
             }
@@ -78,7 +76,7 @@ class Person {
                 --this.cooldown;
             }
         }
-        else if(this.state === IDLE && tasks.length !== 0){
+        else if(this.state === IDLE && mainThread.tasks.length !== 0){
             if(walkCooldown <= 0){
                 this.state = WALKING;
                 this.dest = this.id * 100 + 100;
@@ -111,9 +109,6 @@ class Person {
 
         var animFrame = 0;
         if(this.state === WALKING){
-            animFrame = Math.max(0, Math.min(animImages.length-1, Math.floor(4 * (1. - this.cooldown / taskWait))));
-
-            // ctx.drawImage(animImages[animFrame], this.pos[0] - 30, this.pos[1] - headHeight - 10);
             ctx.save();
             ctx.translate(this.pos[0], this.pos[1] - headHeight - 10);
             if(this.pos[0] > this.dest)
@@ -215,11 +210,6 @@ window.addEventListener('load', function() {
     width = parseInt(canvas.style.width);
     height = parseInt(canvas.style.height);
 
-    for(var i = 0; i < 4; i++){
-        animImages[i] = new Image();
-        animImages[i].src = "assets/anim_000" + i + ".png";
-    }
-
     deskImage = new Image();
     deskImage.src = "assets/desk.png";
 
@@ -263,8 +253,9 @@ let mainThread = new Person({
     balls: [],
 });
 
+mainThread.tasks = [];
+
 const desks = [...Array(4)].map((_, i) => new Desk([i * 100 + 100, 300]));
-let tasks = [...Array(4)].map((_, i) => i);
 let walkCooldown = 0;
 
 // for(var i = 0; i < 10; i++){
@@ -305,8 +296,21 @@ function animate(){
         person.animate();
     }
 
-    if(0 === tasks.length && people.reduce((accum, person) => accum && person.state === IDLE, true)){
-        tasks = [...Array(4)].map((_, i) => i);
+    if(0 === mainThread.tasks.length && people.reduce((accum, person) => accum && person.state === IDLE, true)){
+        mainThread.tasks = [...Array(8)].map((_, i) => new Ball(mainThread));
+        mainThread.balls = [];
+    }
+    else{
+        for(let i = 0; i < mainThread.tasks.length; i++){
+            const ball = mainThread.tasks[i];
+            ball.pos[0] = mainThread.pos[0] + deskOffset[0] + i * ballRadius;
+            ball.pos[1] = mainThread.pos[1] + deskOffset[1] - 2. * ballRadius;
+        }
+        for(let i = 0; i < mainThread.balls.length; i++){
+            const ball = mainThread.balls[i];
+            ball.pos[0] = mainThread.pos[0] + deskOffset[0] + i * ballRadius;
+            ball.pos[1] = mainThread.pos[1] + deskOffset[1];
+        }
     }
 }
 
@@ -346,6 +350,12 @@ function draw() {
 
     for(var i = 0; i < people.length; i++)
         people[i].draw(ctx, 0);
+
+    for(let i = 0; i < mainThread.tasks.length; i++)
+        drawBall(mainThread.tasks[i], ctx);
+
+    for(let i = 0; i < mainThread.balls.length; i++)
+        drawBall(mainThread.balls[i], ctx);
 
     for(var i = 0; i < balls.length; i++){
         drawBall(balls[i], ctx);
