@@ -9,12 +9,13 @@ let deskBackImage;
 let studentImages = [];
 let studentSitImage;
 
-let taskWait = 8;
+let taskWait = 50;
+let ballSpeed = 20;
 let multithread = false;
 let workStealing = false;
 
 const accel = 2;
-const animFrames = 5;
+const animFrames = 10;
 const ballRadius = 5;
 const deskOffset = [30, 35];
 
@@ -22,7 +23,7 @@ const IDLE = 0;
 const WALKING = 1;
 const SIT = 2;
 
-const walkSpeed = 10;
+const walkSpeed = 5;
 
 class Person {
     name = "A";
@@ -61,7 +62,7 @@ class Person {
                 }
                 if(this.balls.length !== 0 && this.heldBall === null){
                     this.heldBall = this.balls.pop();
-                    this.cooldown = taskWait;
+                    this.cooldown = taskWait * (Math.random() + 0.5);
                 }
                 else if(balls.reduce((acc, ball) => acc && ball.owner !== this, true)){
                     // If a ball is flying towards us, don't fetch the next ball or return.
@@ -111,7 +112,6 @@ class Person {
         var color = 0 < this.cooldown ? "#7f7f7f" : "#000000";
         var headHeight = 40;
 
-        var animFrame = 0;
         if(this.state === WALKING){
             ctx.save();
             ctx.translate(this.pos[0], this.pos[1] - headHeight - 10);
@@ -166,9 +166,12 @@ class Ball {
     }
 
     throw(target, source){
-        const speed = 10 + Math.random() * 20;
+        // const speed = ballSpeed * (Math.random() + 0.5);
         /// x = 1/2 * v * t^2 => t = \sqrt{2x/v}
-        const timeToArrive = (2 * speed / accel);
+        // const timeToArrive = (2 * speed / accel);
+        /// v = (2 * x) / t^2
+        const timeToArrive = ballSpeed * (Math.random() + 0.5);
+        const speed = 2 * timeToArrive / accel;
         this.owner = target;
         this.pos[0] = source.pos[0] + deskOffset[0];
         this.pos[1] = source.pos[1] + deskOffset[1];
@@ -200,10 +203,17 @@ window.addEventListener('load', function() {
         });
     }
 
-    var edit = this.document.getElementById("taskWaitEdit");
-    if(edit){
-        edit.addEventListener("change", function(){
-            taskWait = parseFloat(edit.value);
+    const taskWaitEdit = this.document.getElementById("taskWaitEdit");
+    if(taskWaitEdit){
+        taskWaitEdit.addEventListener("change", function(){
+            taskWait = parseFloat(taskWaitEdit.value);
+        });
+    }
+
+    const ballSpeedEdit = this.document.getElementById("ballSpeedEdit");
+    if(ballSpeedEdit){
+        ballSpeedEdit.addEventListener("change", function(){
+            ballSpeed = parseFloat(ballSpeedEdit.value);
         });
     }
 
@@ -234,7 +244,8 @@ window.addEventListener('load', function() {
     draw();
 
     // Animate (framerate could be subject to discuss)
-    window.setInterval(timerProc, 50);
+    // window.setInterval(timerProc, 50);
+    window.setTimeout(timerProc, 50);
 });
 
 var ballThrows = 0;
@@ -269,6 +280,7 @@ let walkCooldown = 0;
 function timerProc(){
     animate();
     draw();
+    window.requestAnimationFrame(timerProc);
 }
 
 function animate(){
