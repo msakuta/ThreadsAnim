@@ -377,6 +377,11 @@ function draw() {
     ctx.clearRect(0,0,width,height);
     ctx.setTransform(1,0,0,1, offset, 0);
 
+    const desiredWidth = workerThreads.length * 100 + 200;
+    if(width < desiredWidth){
+        ctx.scale(width / desiredWidth, width / desiredWidth);
+    }
+
     for(let desk of desks)
         desk.draw(ctx, 2);
 
