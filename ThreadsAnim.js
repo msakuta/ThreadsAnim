@@ -13,7 +13,7 @@ let numThreads = 4;
 let taskWait = 50;
 let ballSpeed = 15;
 let ballCount = 16;
-let multithread = false;
+let poolThreads = false;
 let workStealing = false;
 
 const accel = 2;
@@ -69,8 +69,10 @@ class Person {
                 else if(balls.reduce((acc, ball) => acc && ball.owner !== this, true)){
                     // If a ball is flying towards us, don't fetch the next ball or return.
                     if(mainThread.tasks.length === 0){
-                        this.dest = 0;
-                        this.state = WALKING;
+                        if(!poolThreads){
+                            this.dest = 0;
+                            this.state = WALKING;
+                        }
                     }
                     else if(workStealing){
                         // fetch task
@@ -198,10 +200,10 @@ window.addEventListener('load', function() {
         });
     }
 
-    var multithreadCheck = document.getElementById("MultithreadCheck");
-    if(multithreadCheck){
-        multithreadCheck.addEventListener("click", function(){
-            multithread = multithreadCheck.checked;
+    var poolThreadsCheck = document.getElementById("poolThreadsCheck");
+    if(poolThreadsCheck){
+        poolThreadsCheck.addEventListener("click", function(){
+            poolThreads = poolThreadsCheck.checked;
         });
     }
 
@@ -277,16 +279,18 @@ let desks;
 let walkCooldown = 0;
 
 function resetState(){
-    workerThreads = [...Array(numThreads)].map((_, i) => new Person({
-        id: i,
-        name: "ABCDEFGHJKLMOPQR"[i],
-        dest: i * 100 + 100,
-        pos: [0, 300],
-        balls: [], cooldown: i === 0 ? 10 : 0
-    }));
-    desks = [...Array(numThreads)].map((_, i) => new Desk([i * 100 + 100, 300]))
+    if(!poolThreads || workerThreads.length !== numThreads){
+        workerThreads = [...Array(numThreads)].map((_, i) => new Person({
+            id: i,
+            name: "ABCDEFGHJKLMOPQR"[i],
+            dest: i * 100 + 100,
+            pos: [0, 300],
+            balls: [], cooldown: i === 0 ? 10 : 0
+        }));
+        desks = [...Array(numThreads)].map((_, i) => new Desk([i * 100 + 100, 300]))
 
-    mainThread.pos[0] = workerThreads.length * 100 + 100;
+        mainThread.pos[0] = workerThreads.length * 100 + 100;
+    }
 }
 
 resetState();
@@ -330,7 +334,11 @@ function animate(){
         person.animate();
     }
 
-    if(0 === mainThread.tasks.length && workerThreads.reduce((accum, worker) => accum && worker.state === IDLE, true)){
+    let finished = mainThread.tasks.length === 0 && (poolThreads ?
+        balls.length === 0 && workerThreads.reduce((accum, worker) => accum && worker.balls.length === 0 && worker.heldBall === null, true)
+        : workerThreads.reduce((accum, worker) => accum && worker.state === IDLE, true));
+
+    if(finished){
         mainThread.tasks = [...Array(ballCount)].map((_, i) => new Ball(mainThread));
         mainThread.balls = [];
         resetState();
