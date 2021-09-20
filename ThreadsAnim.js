@@ -233,6 +233,11 @@ window.addEventListener('load', function() {
     sliderInit("ballSpeed", "ballSpeedLabel", value => ballSpeed = parseFloat(value));
     sliderInit("ballCount", "ballCountLabel", value => ballCount = parseFloat(value));
 
+    const resetButton = document.getElementById("reset");
+    if(resetButton){
+        resetButton.addEventListener("click", resetState);
+    }
+
     canvas = document.getElementById("scratch");
     if ( ! canvas || ! canvas.getContext ) {
         return false;
@@ -281,17 +286,21 @@ let desks;
 let walkCooldown = 0;
 
 function resetState(){
-    if(!poolThreads || workerThreads.length !== numThreads){
-        workerThreads = [...Array(numThreads)].map((_, i) => new Person({
-            id: i,
-            name: "ABCDEFGHJKLMOPQR"[i],
-            dest: i * 100 + 100,
-            pos: [0, 300],
-            balls: [], cooldown: i === 0 ? 10 : 0
-        }));
-        desks = [...Array(numThreads)].map((_, i) => new Desk([i * 100 + 100, 300]))
+    workerThreads = [...Array(numThreads)].map((_, i) => new Person({
+        id: i,
+        name: "ABCDEFGHJKLMOPQR"[i],
+        dest: i * 100 + 100,
+        pos: [0, 300],
+        balls: [], cooldown: i === 0 ? 10 : 0
+    }));
+    desks = [...Array(numThreads)].map((_, i) => new Desk([i * 100 + 100, 300]))
 
-        mainThread.pos[0] = workerThreads.length * 100 + 100;
+    mainThread.pos[0] = workerThreads.length * 100 + 100;
+}
+
+function tryResetState(){
+    if(!poolThreads || workerThreads.length !== numThreads){
+        resetState();
     }
 }
 
@@ -343,7 +352,7 @@ function animate(){
     if(finished){
         mainThread.tasks = [...Array(ballCount)].map((_, i) => new Ball(mainThread));
         mainThread.balls = [];
-        resetState();
+        tryResetState();
     }
     else{
         for(let i = 0; i < mainThread.tasks.length; i++){
